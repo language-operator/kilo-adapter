@@ -24,11 +24,16 @@ publish: build
 # is no version to keep in step. It runs the image the way the operator does —
 # read-only root, uid 1000, all capabilities dropped — so a failure here is a
 # failure in-cluster.
+#
+# The suite checks task mode with manifests of its own, so test/task-mode.sh
+# then runs this image's actual task command, Kilo included, against a mock
+# gateway: exit 0 on a good model, non-zero on a bad one or no instructions.
 test: build
 	docker run --rm --entrypoint cat $(IMAGE):$(TAG) \
 		/opt/coding-runtime/test/conformance.sh > $(CONFORMANCE)
 	chmod +x $(CONFORMANCE)
 	$(CONFORMANCE) $(IMAGE):$(TAG) adapter
+	test/task-mode.sh $(IMAGE):$(TAG)
 
 # Both halves of the chart-lint CI job. claude-code-adapter's target lints only;
 # templating too is what the workflow actually does, so this matches CI instead.
@@ -65,7 +70,7 @@ uninstall:
 help:
 	@echo "Targets:"
 	@echo "  build      - Build the adapter image ($(IMAGE):$(TAG) + :latest)"
-	@echo "  test       - Build, then run the coding-runtime conformance suite"
+	@echo "  test       - Build, then run the conformance suite and the task-mode test"
 	@echo "  lint-chart - helm lint + helm template the chart (the chart-lint CI job)"
 	@echo "  publish    - Build and push $(TAG) + latest to the registry"
 	@echo "  dev        - Build, import into k3s, and upgrade the runtime release (inner loop)"

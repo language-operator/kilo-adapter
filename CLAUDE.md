@@ -15,8 +15,8 @@ It is a **thin layer over
 [`coding-runtime`](https://github.com/language-operator/coding-runtime)**. The base owns
 the OS layer, the web terminal (node-pty over a WebSocket, with a cross-origin guard and
 a keepalive), `tini`, and the ETL that turns the operator's `/etc/agent/config.yaml` into
-a normalized config. This repo adds the Kilo CLI plus three files that describe it to
-the base.
+a normalized config. This repo adds the Kilo CLI plus the files that describe it to the
+base.
 
 One container, running the base entrypoint: resolve the environment, seed config, serve.
 There is **no init container** — seeding happens in the agent container, because the
@@ -38,6 +38,11 @@ it.
   `--continue` once the workspace holds a session store so a slept agent resumes instead
   of opening blank. The guard matters: with nothing to resume, Kilo's TUI leaves a
   placeholder session and shows an unexplained error toast.
+- `launch-kilo-task.sh` — the `task.exec` command for `spec.execution.mode: task`:
+  `kilo run --auto --format json` with `$KILO_CONFIG_DIR/task.md` (the instructions, written
+  by the emitter) on stdin. Needs base `>=0.1.5`, where `task.exec` arrived.
+- `test/task-mode.sh` + `test/mock-gateway.mjs` — runs the image's real task command
+  against a mock Responses-API gateway.
 - `chart/` — the Helm chart registering the cluster-scoped `LanguageAgentRuntime` named
   `kilo`.
 - `.github/workflows/` — `test.yaml`, `build-image.yaml`, `release-chart.yaml`.
@@ -47,13 +52,16 @@ it.
 - `make test` — builds the image and runs coding-runtime's conformance suite in `adapter`
   mode. The suite is **extracted from the image under test**, so the checks always match
   the runtime being checked; it runs the container the way the operator does (read-only
-  root, uid 1000, all capabilities dropped). Needs Docker.
+  root, uid 1000, all capabilities dropped). Then `test/task-mode.sh` runs one task-mode
+  agent per case against a mock gateway: exit 0 on a good model (with the instructions as
+  the prompt and the per-agent key as the bearer), non-zero on a bad model name or no
+  instructions. Needs Docker.
 - `make lint-chart` — `helm lint chart` plus `helm template kilo chart`.
 - There is **no linter and no unit-test suite**. CI correctness is exactly the two
-  `test.yaml` jobs: `image-test` and `chart-lint`.
+  `test.yaml` jobs: `image-test` (conformance + task mode) and `chart-lint`.
 - Changes to the terminal, the emitter or the manifest are mostly **not** covered by
-  anything local — the conformance suite checks the runtime contract, not Kilo's
-  behaviour. Say so plainly rather than implying a green build proves more than it does.
+  anything local — the conformance suite checks the runtime contract, and the task-mode
+  test one headless run; neither checks the TUI, MCP tools, or a real gateway. Say so plainly rather than implying a green build proves more than it does.
 - The PR title must be a conventional commit (`feat:`, `fix:`, `chore:`, `docs:`).
 
 ## Build & dev deploy
