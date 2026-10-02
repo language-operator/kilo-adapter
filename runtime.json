@@ -1,10 +1,16 @@
 {
   "schemaVersion": 1,
   "name": "kilo",
-  "displayName": "kilo",
+  "displayName": "Kilo",
   "role": "main",
-  "requires": { "codingRuntime": ">=0.1.2 <1.0.0" },
-  "env": { "KILO_CONFIG_DIR": "${STATE_DIR}/kilo" },
+  "requires": { "codingRuntime": ">=0.1.5 <1.0.0" },
+  "env": {
+    "KILO_CONFIG_DIR": "${STATE_DIR}/kilo",
+    "KILO_TELEMETRY_LEVEL": "off",
+    "KILO_DISABLE_SESSION_INGEST": "1",
+    "KILO_DISABLE_SHARE": "1",
+    "KILO_DISABLE_AUTOUPDATE": "1"
+  },
   "preflight": [{ "path": "${STATE_DIR}/kilo", "mode": "700" }],
   "config": { "emitter": { "type": "module", "path": "/opt/adapter/emit.mjs" } },
   "serve": { "surface": "terminal", "port": 8080, "originGuard": true },
@@ -14,5 +20,6 @@
     "cwd": "${WORKDIR}",
     "wsPath": "/ws",
     "keepaliveSeconds": 25
-  }
+  },
+  "task": { "exec": ["launch-kilo-task"] }
 }

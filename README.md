@@ -15,20 +15,32 @@ The image is [`coding-runtime`](https://github.com/language-operator/coding-runt
 plus the Kilo CLI. The base owns the OS layer, the web terminal (xterm.js over
 a node-pty WebSocket bridge, with a cross-origin guard and a 25s keepalive), `tini`,
 and the ETL that turns the operator's `/etc/agent/config.yaml` into a normalized
-config. What lives here is the three files that describe Kilo to it:
+config. What lives here is the files that describe Kilo to it:
 
-- **`runtime.json`** — the manifest: where config goes (`$STATE_DIR/kilo`),
-  the serving surface, and how tmux launches the TUI.
+- **`runtime.json`** — the manifest: where config goes (`$STATE_DIR/kilo`, via
+  `KILO_CONFIG_DIR`), the serving surface, how tmux launches the TUI, and the
+  task-mode command. It also turns off Kilo's telemetry, session upload, sharing and
+  autoupdate, none of which an operator-managed agent should do on its own.
 - **`emit.mjs`** — the emitter: normalized config → `kilo.jsonc` (provider,
   model, MCP servers). Agent **instructions** are written to `instructions.md` and
   referenced from Kilo's `instructions` field, so they load as standing context
-  for every session — no async seeding, no timing.
+  for every session — no async seeding, no timing. The instructions are also
+  written to `task.md`, the prompt for a task-mode run.
 - **`launch-kilo.sh`** — what tmux runs. The base has already set the working
   directory (the cloned repo when the agent sets `spec.repository`, else
   `/workspace`), so it opens that project directly. It also passes `--continue` once
   the workspace holds a session store, so an agent that is put to sleep and woken —
   a new pod, and with it a new tmux server — resumes the conversation rather than
   opening blank.
+- **`launch-kilo-task.sh`** — what a task-mode agent runs
+  (`spec.execution.mode: task`): `kilo run --auto --format json`, with `task.md` on
+  stdin. The base runs it to completion and exits with its code — `0` is a
+  `Succeeded` run, anything else `Failed` (a bad model name or an unreachable gateway
+  exits `1`; no instructions fails before Kilo starts). `--auto` approves every
+  permission not explicitly denied, since nobody is there to answer a prompt.
+
+Kilo's `openai` provider speaks the OpenAI **Responses** API (`POST /v1/responses`),
+so the cluster gateway has to serve it — as it already must for opencode.
 
 One container, running the base entrypoint: resolve the environment, seed config,
 serve. Seeding runs in the agent container rather than an init container because
@@ -36,7 +48,7 @@ the operator mounts `/tmp` there only, so the two would share no writable path.
 tmux keeps the session alive across browser reconnects.
 
 The sibling [`claude-code-adapter`](https://github.com/language-operator/claude-code-adapter)
-is the same shape on the same base, swapping the CLI and the three files.
+is the same shape on the same base, swapping the CLI and these files.
 
 ## Install
 
@@ -84,8 +96,8 @@ helm template kilo chart
 
 - `build-image.yaml` — builds and pushes the image to `ghcr.io` on push to `main` and `v*` tags.
 - `release-chart.yaml` — packages `chart/` and pushes it to `oci://ghcr.io/language-operator/charts`.
-- `test.yaml` — builds the image, runs the `coding-runtime` conformance suite against
-  it under the operator's posture (read-only root, uid 1000, all capabilities dropped),
+- `test.yaml` — builds the image, runs the `coding-runtime` conformance suite and
+  `test/task-mode.sh` against it under the operator's posture (read-only root, uid 1000, all capabilities dropped),
   and lints/templates the chart on every PR. The suite is taken out of the image rather
   than fetched, so the checks always match the runtime being checked, and no failures are
   tolerated.

@@ -107,6 +107,11 @@ export function emit(config, { renderHeaders = null, renderRef = null } = {}) {
     values.instructions = [file];
   }
 
+  // The prompt for a task-mode run, which launch-kilo-task feeds to `kilo run`
+  // on stdin. Written on every seed, empty when there are no instructions, so a
+  // task the operator has since withdrawn cannot linger here and be run again.
+  writes.push({ path: `${configDir}/task.md`, contents: config.instructions ? `${config.instructions}\n` : '' });
+
   writes.push({ path: `${configDir}/kilo.jsonc`, values, owns });
   return writes;
 }

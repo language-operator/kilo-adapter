@@ -48,6 +48,12 @@ jobs:
       - name: Run conformance suite
         run: ./conformance.sh kilo-adapter:test adapter
 
+      # The suite checks task mode with manifests of its own; this runs the
+      # image's real task command (launch-kilo-task, then `kilo run`) against a
+      # mock gateway, under the same posture.
+      - name: Run task-mode test
+        run: test/task-mode.sh kilo-adapter:test
+
   chart-lint:
     runs-on: ubuntu-latest
     steps:
