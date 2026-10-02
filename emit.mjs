@@ -1,7 +1,7 @@
 /**
- * opencode emitter.
+ * Kilo emitter.
  *
- * opencode.jsonc is operator-managed in full — unlike Claude Code's files it
+ * kilo.jsonc is operator-managed in full — unlike Claude Code's files it
  * holds no user state — so every key here is owned and a dropped model or tool
  * disappears from the file on the next seed.
  *
@@ -12,17 +12,17 @@
  */
 
 /**
- * opencode's remote MCP default is 5000 ms to fetch a server's tools, too short
+ * Kilo's remote MCP default is 5000 ms to fetch a server's tools, too short
  * for an external server that may sit behind a control plane and wait on a
  * reconcile; header-bearing (external) entries get this instead.
  */
 const EXTERNAL_TIMEOUT_MS = 30000;
 
 /**
- * The gateway credential, as opencode should see it.
+ * The gateway credential, as Kilo should see it.
  *
- * When the operator issued a per-agent key, write opencode's own environment
- * reference rather than the value: opencode.jsonc lives on the workspace
+ * When the operator issued a per-agent key, write Kilo's own environment
+ * reference rather than the value: kilo.jsonc lives on the workspace
  * volume, so resolving here would put the credential on disk for no gain.
  * Without a key, or on a base too old to render references, fall back to the
  * shared placeholder — the behaviour before per-agent keys existed.
@@ -43,13 +43,13 @@ function gatewayKey(config, renderRef) {
 }
 
 export function emit(config, { renderHeaders = null, renderRef = null } = {}) {
-  const configDir = config.paths.stateDir ? `${config.paths.stateDir}/opencode` : '/etc/opencode';
+  const configDir = config.paths.stateDir ? `${config.paths.stateDir}/kilo` : '/etc/kilo';
 
-  // An external server's headers go in as `{env:NAME}`, opencode's own
-  // environment reference, so the token is never written into opencode.jsonc.
+  // An external server's headers go in as `{env:NAME}`, Kilo's own
+  // environment reference, so the token is never written into kilo.jsonc.
   // Rendering is all-or-nothing: a server whose headers cannot all be rendered
   // is left out (the helper warns), never configured without auth to 401
-  // unexplained. `oauth: false` because opencode otherwise auto-detects OAuth
+  // unexplained. `oauth: false` because Kilo otherwise auto-detects OAuth
   // on a remote server and could send a headless agent into a browser flow it
   // cannot complete, even with a correct bearer header. A base runtime without
   // the helper cannot honour headers at all; failing the seed says so.
@@ -69,7 +69,7 @@ export function emit(config, { renderHeaders = null, renderRef = null } = {}) {
   const values = { autoupdate: false };
   const owns = ['autoupdate', 'provider', 'model', 'mcp', 'instructions'];
 
-  // Every owned key below is supplied on every run, null included. opencode.jsonc
+  // Every owned key below is supplied on every run, null included. kilo.jsonc
   // holds no user state, so the runtime can state its whole intent each time —
   // and an explicit null removes a key regardless of provenance, which is what
   // keeps a withdrawn model or tool from lingering after a base upgrade that
@@ -107,7 +107,7 @@ export function emit(config, { renderHeaders = null, renderRef = null } = {}) {
     values.instructions = [file];
   }
 
-  writes.push({ path: `${configDir}/opencode.jsonc`, values, owns });
+  writes.push({ path: `${configDir}/kilo.jsonc`, values, owns });
   return writes;
 }
 
